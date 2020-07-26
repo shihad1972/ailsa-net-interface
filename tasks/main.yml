@@ -1,2 +1,23 @@
 ---
 # tasks file for ailsa-net-interface
+
+- name: Configure network interface
+  become: true
+  template:
+    src: interface.j2
+    dest: "/etc/network/interfaces.d/{{ item.interface }}.cfg"
+    owner: root
+    group: root
+    mode: 0644
+  loop: "{{ interfaces }}"
+  register: network_interface
+
+# We are using 2 lists here. In order to loop over them sequentially
+# we need to use this syntax in the loop command. We can then reference
+# the lists with 0 being interfaces, and 1 being network_interface.results
+
+- name: Bring up new network interface
+  become: true
+  command: "/usr/sbin/ifup {{ item.0.interface }}"
+  loop: "{{ interfaces|product(network_interface.results)|list }}"
+  when: item.1.changed == true
